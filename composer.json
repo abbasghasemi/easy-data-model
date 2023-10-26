@@ -39,6 +39,9 @@
     "extra": {
         "captainhook": {
             "force-install": true
+        },
+        "branch-alias": {
+            "dev-master": "1.0-dev"
         }
     },
     "scripts": {

@@ -13,7 +13,7 @@ command to install the package and add it as a requirement to your project's
 `composer.json`:
 
 ```bash
-composer abbasghasemi/easy-data-model
+composer require abbasghasemi/easy-data-model
 ```
 
 ## Example
