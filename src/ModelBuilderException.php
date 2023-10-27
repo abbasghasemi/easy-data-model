@@ -8,8 +8,13 @@ use Exception;
 
 class ModelBuilderException extends Exception
 {
-    public function __construct(string $class, string $message)
+    public string $class, $property;
+    public mixed $propertyValue;
+    public function __construct(string $class, string $property, mixed $propertyValue, string $message)
     {
+        $this->class = $class;
+        $this->property = $property;
+        $this->propertyValue = $propertyValue;
         parent::__construct("$message in `$class`.");
     }
 

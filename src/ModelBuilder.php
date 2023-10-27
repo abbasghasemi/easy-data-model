@@ -43,49 +43,37 @@ class ModelBuilder
             $attrs = $property->getAttributes();
             $safeData = null;
             if (!empty($attrs)) {
-                if ($attrs[0]->getName() === Ignore::class)
-                    continue;
-                if ($attrs[0]->getName() === Safe::class) {
-                    $safeData = $attrs[0]->getArguments();
-                }
+                if ($attrs[0]->getName() === Ignore::class) continue;
+                if ($attrs[0]->getName() === Safe::class) $safeData = $attrs[0]->getArguments();
             }
             $propertyName = empty($safeData['name']) ? $property->name : $safeData['name'];
             $propertyType = $property->getType();
             if (null === $propertyType) {
-                if (!$exception) {
-                    return;
-                }
-                throw new ModelBuilderException($reflection->name, "The property type '$property->name' can't be empty");
+                if (!$exception) continue;
+                throw new ModelBuilderException($reflection->name, $property->name, null, "The property type '$property->name' can't be empty");
             }
             $object = null;
             if (isset($data[$propertyName])) {
                 $dataType = get_debug_type($data[$propertyName]);
                 if ($propertyType instanceof ReflectionNamedType) {
                     $type = $propertyType->getName();
-                    if ($type === "mixed" || $type === $dataType) {
+                    if ("mixed" === $type || $dataType === $type) {
                         $object = $data[$propertyName];
                     } else if ($propertyType->isBuiltin()) {
                         if ('string' === $dataType) {
                             if ('bool' === $type) {
                                 $value = strtolower($data[$propertyName]);
-                                if ('false' === $value) {
-                                    $object = false;
-                                } elseif (in_array($value, ['0', '1', 'true'])) {
-                                    $object = boolval($data[$propertyName]);
-                                }
+                                if ('false' === $value) $object = false;
+                                elseif (in_array($value, ['0', '1', 'true'])) $object = boolval($data[$propertyName]);
                                 unset($value);
                             } else if (is_numeric($data[$propertyName])) {
-                                if ('int' === $type) {
-                                    $object = intval($data[$propertyName]);
-                                } else /*if ('float' === $type)*/ {
-                                    $object = floatval($data[$propertyName]);
-                                }
+                                if ('int' === $type) $object = intval($data[$propertyName]);
+                                else /*if ('float' === $type)*/ $object = floatval($data[$propertyName]);
                             }
                         } else if ('int' === $dataType) {
                             if ('bool' === $type) {
-                                if ($data[$propertyName] === 0 || $data[$propertyName] === 1) {
+                                if ($data[$propertyName] === 0 || $data[$propertyName] === 1)
                                     $object = boolval($data[$propertyName]);
-                                }
                             } else if ('float' === $type) {
                                 $object = $data[$propertyName];
                             } else if ('string' === $type && is_numeric($data[$propertyName])) {
@@ -98,7 +86,8 @@ class ModelBuilder
                         }
                     } else {
                         if (is_subclass_of($type, UnitEnum::class)) {
-                            $object = method_exists($type, 'tryFrom') ? call_user_func("$type::tryFrom", $data[$propertyName]) : null;
+                            if (method_exists($type, 'tryFrom'))
+                                $object = call_user_func("$type::tryFrom", $data[$propertyName]);
                         } else if (is_subclass_of($type, ModelBuilder::class)) {
                             $object = new $type($data[$propertyName], $exception);
                         }
@@ -124,18 +113,17 @@ class ModelBuilder
                         !empty($safeData['type']) && !$this->checkTypeArray($safeData['type'], $object, $exception)
                     )
                 ) {
-                    if (!$exception) {
-                        return;
-                    }
+                    if (!$exception) continue;
                     if (is_object($data[$propertyName]) && !method_exists($data[$propertyName], '__toString')) {
                         $value = "Object";
                     } else {
                         $value = is_array($data[$propertyName]) ? 'Array' : strval($data[$propertyName]);
                     }
-                    throw new ModelBuilderException($reflection->name, "The value of '$value' is invalid for parameter '$propertyName'");
+                    throw new ModelBuilderException($reflection->name, $propertyName, $data[$propertyName], "The value of '$value' is invalid for parameter '$propertyName'");
                 }
-            } else if (!$propertyType->allowsNull() && $exception) {
-                throw new ModelBuilderException($reflection->name, "The parameter '$propertyName' is required");
+            } else if (!$propertyType->allowsNull()) {
+                if (!$exception) continue;
+                throw new ModelBuilderException($reflection->name, $propertyName, null, "The parameter '$propertyName' is required");
             }
             $this->{$property->name} = $object;
         }
@@ -168,12 +156,14 @@ class ModelBuilder
     private function checkLengthObject(int $length, mixed &$object): bool/*true*/
     {
         if (is_array($object)) {
-            if (sizeof($object) > $length) $object = array_slice($object, 0, $length);
+            if (sizeof($object) > $length)
+                $object = array_slice($object, 0, $length);
         } elseif (is_string($object)) {
             if (mb_strlen($object, 'UTF-8') > $length)
                 $object = mb_substr($object, 0, $length, 'UTF-8');
         } elseif (is_numeric($object)) {
-            if ($object > $length) $object = $length;
+            if ($object > $length)
+                $object = $length;
         }
         return true;
     }
@@ -184,7 +174,7 @@ class ModelBuilder
             for ($i = 0, $j = sizeof($object); $i < $j; $i++) {
                 $dataType = get_debug_type($object[$i]);
                 if ($type !== $dataType) {
-                    if (is_subclass_of($type, ModelBuilder::class) && 'array' === $dataType) {
+                    if ('array' === $dataType && is_subclass_of($type, ModelBuilder::class)) {
                         $object[$i] = new $type($object[$i], $exception);
                         continue;
                     }

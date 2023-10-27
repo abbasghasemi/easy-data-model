@@ -61,7 +61,10 @@ class Items extends ModelBuilder
     protected Number $number;
 }
 
-echo json_encode(new Items([
+$data = json_decode(file_get_contents('php://input'), True);
+
+// Valid sample
+$data = [
     'name' => 'test name',
     'count' => '1', // try to convert to a number.
     'book' => [
@@ -83,9 +86,13 @@ echo json_encode(new Items([
     'flag' => '1578788',  // is string
     'number2' => 'two',
     'number' => 'one'
-]));
+];
+$item = new Items($data);
+echo $item->name;
+echo json_encode($item);
 /*
- {
+ * Output: Success
+ test name{
     "name":"test name",
     "count":1,
     "book":{
@@ -115,21 +122,28 @@ echo json_encode(new Items([
 }
  */
 
+// Invalid sample
+$data = [
+    'name' => 'te',
+    'count' => '2',
+    'book' => [
+        'is_article' => 'fAlsE',
+        'isAvailable' => 'Falsee',
+    ],
+    'text' => 'test^text',
+    'meta' => [1, 2, 3, 4, 5, 6],
+    'books' => [1,2],
+    'number' => 'three'
+];
 try {
-    echo json_encode(new Items([
-        'name' => 'te',
-        'count' => '2',
-        'book' => [
-            'is_article' => 'fAlsE',
-            'isAvailable' => 'Falsee',
-        ],
-        'text' => 'test^text',
-        'meta' => [1, 2, 3, 4, 5, 6],
-        'books' => [1,2],
-        'number' => 'three'
-    ], true));
+    $item = new Items($data, true);
+    echo $item->name;
 } catch (ModelBuilderException $e) {
+//    echo $e->class;
+//    echo $e->property;
+//    echo $e->propertyValue ?? 'Empty';
     echo $e->getMessage();
+    // Output: Failed
     // The value of 'Falsee' is invalid for parameter 'isAvailable' in `Book`.
     // The value of 'te' is invalid for parameter 'name' in `Items`.
     // The value of '2' is invalid for parameter 'count' in `Items`.
