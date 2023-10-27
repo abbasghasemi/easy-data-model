@@ -49,7 +49,7 @@ class Items extends ModelBuilder
     #[Safe(min: 1, max: 1)]
     public int $count;
     public Book $book;
-    #[Safe(pattern: '/^\w+$/i')]
+    #[Safe(pattern: '/^\w+$/i', length: 6)]
     public string $text;
     #[Safe(max: 5, type: 'int')]
     public mixed $meta;
@@ -69,7 +69,7 @@ echo json_encode(new Items([
         'isAvailable' => '1', // try to convert to a boolean,
         'description' => 48999696 // convert to '48999696'
     ],
-    'text' => 'test_text',
+    'text' => 'test_text', // values greater than 6 are ignored
     'meta' => [1, 2, 3, 4, 5], // allow null,empty and maxLength 5.
     'books' => [
         [
@@ -93,7 +93,7 @@ echo json_encode(new Items([
         "description":"48999696",
         "isAvailable":true
     },
-    "text":"test_text",
+    "text":"test_t",
     "meta":[
         1,2,3,4,5
     ],

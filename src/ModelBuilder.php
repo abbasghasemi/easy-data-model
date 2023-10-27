@@ -9,6 +9,7 @@ use ReflectionNamedType;
 use UnitEnum;
 
 use function mb_strlen;
+use function mb_substr;
 use function sizeof;
 use function get_debug_type;
 use function strtolower;
@@ -119,6 +120,7 @@ class ModelBuilder
                         !empty($safeData['pattern']) && is_string($object) && !preg_match($safeData['pattern'], $object) ||
                         !empty($safeData['min']) && !$this->checkMinObject($safeData['min'], $object) ||
                         !empty($safeData['max']) && !$this->checkMaxObject($safeData['max'], $object) ||
+                        !empty($safeData['length']) && !$this->checkLengthObject($safeData['length'], $object) ||
                         !empty($safeData['type']) && !$this->checkTypeArray($safeData['type'], $object, $exception)
                     )
                 ) {
@@ -159,6 +161,19 @@ class ModelBuilder
             return mb_strlen($object, 'UTF-8') <= $max;
         } elseif (is_numeric($object)) {
             return $object <= $max;
+        }
+        return true;
+    }
+
+    private function checkLengthObject(int $length, mixed &$object): bool/*true*/
+    {
+        if (is_array($object)) {
+            if (sizeof($object) > $length) $object = array_slice($object, 0, $length);
+        } elseif (is_string($object)) {
+            if (mb_strlen($object, 'UTF-8') > $length)
+                $object = mb_substr($object, 0, $length, 'UTF-8');
+        } elseif (is_numeric($object)) {
+            if ($object > $length) $object = $length;
         }
         return true;
     }
