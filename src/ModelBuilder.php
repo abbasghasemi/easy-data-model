@@ -121,7 +121,9 @@ class ModelBuilder
                     }
                     throw new ModelBuilderException($reflection->name, $propertyName, $data[$propertyName], "The value of '$value' is invalid for parameter '$propertyName'");
                 }
-            } else if (!$propertyType->allowsNull()) {
+            } elseif ($property->hasDefaultValue()) {
+                continue;
+            } elseif (!$propertyType->allowsNull()) {
                 if (!$exception) continue;
                 throw new ModelBuilderException($reflection->name, $propertyName, null, "The parameter '$propertyName' is required");
             }
