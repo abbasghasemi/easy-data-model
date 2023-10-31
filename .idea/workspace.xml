@@ -6,6 +6,7 @@
   <component name="ChangeListManager">
     <list default="true" id="8398da13-0c2e-481a-867a-9659f2f8ef64" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/EnumBuilder.php" beforeDir="false" afterPath="$PROJECT_DIR$/src/EnumBuilder.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/ModelBuilder.php" beforeDir="false" afterPath="$PROJECT_DIR$/src/ModelBuilder.php" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -71,7 +72,12 @@
       <workItem from="1698386578816" duration="1348000" />
       <workItem from="1698393787806" duration="832000" />
       <workItem from="1698411275483" duration="1987000" />
-      <workItem from="1698562840273" duration="201000" />
+      <workItem from="1698562840273" duration="301000" />
+      <workItem from="1698569694450" duration="2000" />
+      <workItem from="1698741579614" duration="1282000" />
+      <workItem from="1698743116982" duration="64000" />
+      <workItem from="1698743257588" duration="1192000" />
+      <workItem from="1698744824127" duration="339000" />
     </task>
     <servers />
   </component>

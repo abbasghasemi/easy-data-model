@@ -76,8 +76,9 @@ class ModelBuilder
                                     $object = boolval($data[$propertyName]);
                             } else if ('float' === $type) {
                                 $object = $data[$propertyName];
-                            } else if ('string' === $type && is_numeric($data[$propertyName])) {
-                                $object = strval($data[$propertyName]);
+                            } else if ('string' === $type) {
+                                if (is_numeric($data[$propertyName]))
+                                    $object = strval($data[$propertyName]);
                             }
                         } else if ('int' === $type && is_float($data[$propertyName])) {
                             $object = intval($data[$propertyName]);
@@ -86,10 +87,14 @@ class ModelBuilder
                         }
                     } else {
                         if (is_subclass_of($type, UnitEnum::class)) {
-                            if (method_exists($type, 'tryFrom'))
-                                $object = call_user_func("$type::tryFrom", $data[$propertyName]);
+                            if (is_string($data[$propertyName]))
+                                $value = $data[$propertyName];
+                            if (method_exists($type, 'tryFrom') && !empty($value))
+                                $object = call_user_func("$type::tryFrom", $value);
+                            unset($value);
                         } else if (is_subclass_of($type, ModelBuilder::class)) {
-                            $object = new $type($data[$propertyName], $exception);
+                            if (is_array($data[$propertyName]))
+                                $object = new $type($data[$propertyName], $exception);
                         }
                     }
                     unset($type);
@@ -102,7 +107,7 @@ class ModelBuilder
                             break;
                         }
                     }
-                    unset($types);
+                    unset($types, $j, $k);
                 }
                 if (is_null($object) && !$propertyType->allowsNull() ||
                     !is_null($object) && !empty($safeData) && (
@@ -121,6 +126,7 @@ class ModelBuilder
                     }
                     throw new ModelBuilderException($reflection->name, $propertyName, $data[$propertyName], "The value of '$value' is invalid for parameter '$propertyName'");
                 }
+                unset($dataType);
             } elseif ($property->hasDefaultValue()) {
                 continue;
             } elseif (!$propertyType->allowsNull()) {
