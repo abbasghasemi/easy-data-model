@@ -26,6 +26,9 @@
     <option name="stateVersion" value="1" />
   </component>
   <component name="PhpWorkspaceProjectConfiguration" interpreter_name="PHP" />
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="ProjectErrors" />
+  </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 6
 }</component>
@@ -77,7 +80,18 @@
       <workItem from="1698741579614" duration="1282000" />
       <workItem from="1698743116982" duration="64000" />
       <workItem from="1698743257588" duration="1192000" />
-      <workItem from="1698744824127" duration="339000" />
+      <workItem from="1698744824127" duration="457000" />
+      <workItem from="1698999597703" duration="1000" />
+      <workItem from="1699081385443" duration="37000" />
+      <workItem from="1699081447475" duration="8000" />
+      <workItem from="1699081469963" duration="30000" />
+      <workItem from="1699081537851" duration="901000" />
+      <workItem from="1699082983173" duration="52000" />
+      <workItem from="1699083244652" duration="363000" />
+      <workItem from="1699089771616" duration="90000" />
+      <workItem from="1699089879417" duration="112000" />
+      <workItem from="1699090246690" duration="104000" />
+      <workItem from="1699166083982" duration="1724000" />
     </task>
     <servers />
   </component>

@@ -27,6 +27,7 @@ use function method_exists;
 use function preg_match;
 use function call_user_func;
 use function is_null;
+//use function class_uses;
 
 class ModelBuilder
 {
@@ -87,11 +88,7 @@ class ModelBuilder
                         }
                     } else {
                         if (is_subclass_of($type, UnitEnum::class)) {
-                            if (is_string($data[$propertyName]))
-                                $value = $data[$propertyName];
-                            if (method_exists($type, 'tryFrom') && !empty($value))
-                                $object = call_user_func("$type::tryFrom", $value);
-                            unset($value);
+                            $object = $this->findEnum($type, $data[$propertyName]);
                         } else if (is_subclass_of($type, ModelBuilder::class)) {
                             if (is_array($data[$propertyName]))
                                 $object = new $type($data[$propertyName], $exception);
@@ -191,5 +188,13 @@ class ModelBuilder
             }
         }
         return true;
+    }
+
+    private function findEnum(string $className, mixed $with): ?object
+    {
+        if (!empty($with)) foreach (call_user_func("$className::cases") as $key => $value)
+            if ($value->name === $with || isset($value->value) && $value->value === $with)
+            return $value;
+        return null;
     }
 }
