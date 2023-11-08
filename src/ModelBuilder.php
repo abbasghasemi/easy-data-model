@@ -27,6 +27,7 @@ use function method_exists;
 use function preg_match;
 use function call_user_func;
 use function is_null;
+
 //use function class_uses;
 
 class ModelBuilder
@@ -38,7 +39,7 @@ class ModelBuilder
     {
         $reflection = new ReflectionClass($this);
         $properties = $reflection->getProperties();
-        for ($i = sizeof($properties) - 1; $i >= 0; $i--) {
+        for ($i = 0, $j = sizeof($properties); $i < $j; $i++) {
             $property = $properties[$i];
             if ($property->isPrivate()) continue;
             $attrs = $property->getAttributes();
@@ -97,16 +98,16 @@ class ModelBuilder
                     unset($type);
                 } else {
                     $types = $propertyType->getTypes();
-                    for ($j = 0, $k = sizeof($types); $j < $k; $j++) {
-                        if ($dataType === $types[$j]->getName() ||
-                            'object' === $types[$j]->getName() && is_object($data[$propertyName])) {
+                    for ($k = 0, $l = sizeof($types); $k < $l; $k++) {
+                        if ($dataType === $types[$k]->getName() ||
+                            'object' === $types[$k]->getName() && is_object($data[$propertyName])) {
                             $object = $data[$propertyName];
                             break;
                         }
                     }
-                    unset($types, $j, $k);
+                    unset($types, $k, $l);
                 }
-                if (is_null($object) && !$propertyType->allowsNull() ||
+                if (is_null($object) && (!$propertyType->allowsNull() || !$this->allowsNull($propertyName)) ||
                     !is_null($object) && !empty($safeData) && (
                         !empty($safeData['pattern']) && is_string($object) && !preg_match($safeData['pattern'], $object) ||
                         !empty($safeData['min']) && !$this->checkMinObject($safeData['min'], $object) ||
@@ -126,12 +127,22 @@ class ModelBuilder
                 unset($dataType);
             } elseif ($property->hasDefaultValue()) {
                 continue;
-            } elseif (!$propertyType->allowsNull()) {
+            } elseif (!$propertyType->allowsNull() || !$this->allowsNull($propertyName)) {
                 if (!$exception) continue;
                 throw new ModelBuilderException($reflection->name, $propertyName, null, "The parameter '$propertyName' is required");
             }
             $this->{$property->name} = $object;
         }
+    }
+
+    /**
+     * Control of nullable properties.
+     * @param string $propertyName
+     * @return bool
+     */
+    protected function allowsNull(string $propertyName): bool
+    {
+        return true;
     }
 
     private function checkMinObject(float $min, mixed $object): bool
@@ -176,7 +187,7 @@ class ModelBuilder
     private function checkTypeArray(mixed $type, mixed &$object, bool $exception): bool
     {
         if (is_array($object)) {
-            for ($i = 0, $j = sizeof($object); $i < $j; $i++) {
+            for ($i = sizeof($object) - 1; $i > -1; $i--) {
                 $dataType = get_debug_type($object[$i]);
                 if ($type !== $dataType) {
                     if ('array' === $dataType && is_subclass_of($type, ModelBuilder::class)) {
@@ -192,9 +203,9 @@ class ModelBuilder
 
     private function findEnum(string $className, mixed $with): ?object
     {
-        if (!empty($with)) foreach (call_user_func("$className::cases") as $key => $value)
+        if (!empty($with)) foreach (call_user_func("$className::cases") as $ley => $value)
             if ($value->name === $with || isset($value->value) && $value->value === $with)
-            return $value;
+                return $value;
         return null;
     }
 }

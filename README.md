@@ -59,6 +59,14 @@ class Items extends ModelBuilder
     public int|string $flag;
     public ?Number2 $number2;
     protected Number $number;
+    
+    protected function allowsNull(string $propertyName): bool
+    {
+        if ('number2' === $propertyName) {
+            // control of nullable property.
+        }
+        return parent::allowsNull($propertyName);
+    }
 }
 
 $data = json_decode(file_get_contents('php://input'), True);
