@@ -48,7 +48,20 @@ class ModelBuilder
                 if ($attrs[0]->getName() === Ignore::class) continue;
                 if ($attrs[0]->getName() === Safe::class) $safeData = $attrs[0]->getArguments();
             }
-            $propertyName = empty($safeData['name']) ? $property->name : $safeData['name'];
+            unset($propertyName);
+            if (empty($safeData['alternate'])) {
+                $propertyName = $property->name;
+            } else if (count($safeData['alternate']) === 1) {
+                $propertyName = $safeData['alternate'][0];
+            } else {
+                foreach ($safeData['alternate'] as $name) {
+                    if (isset($data[$name])) {
+                        $propertyName = $name;
+                        break;
+                    }
+                }
+                if (!isset($propertyName)) $propertyName = $safeData['alternate'][0];
+            }
             $propertyType = $property->getType();
             if (null === $propertyType) {
                 if (!$exception) continue;
@@ -89,7 +102,7 @@ class ModelBuilder
                         }
                     } else {
                         if (is_subclass_of($type, UnitEnum::class)) {
-                            $object = $this->findEnum($type, $data[$propertyName]);
+                            $object = self::findEnum($type, $data[$propertyName]);
                         } else if (is_subclass_of($type, ModelBuilder::class)) {
                             if (is_array($data[$propertyName]))
                                 $object = new $type($data[$propertyName], $exception);
@@ -110,10 +123,9 @@ class ModelBuilder
                 if (is_null($object) && (!$propertyType->allowsNull() || !$this->allowsNull($propertyName)) ||
                     !is_null($object) && !empty($safeData) && (
                         !empty($safeData['pattern']) && is_string($object) && !preg_match($safeData['pattern'], $object) ||
-                        !empty($safeData['min']) && !$this->checkMinObject($safeData['min'], $object) ||
-                        !empty($safeData['max']) && !$this->checkMaxObject($safeData['max'], $object) ||
-                        !empty($safeData['length']) && !$this->checkLengthObject($safeData['length'], $object) ||
-                        !empty($safeData['type']) && !$this->checkTypeArray($safeData['type'], $object, $exception)
+                        !empty($safeData['min']) && !self::checkMinObject($safeData['min'], $object) ||
+                        !empty($safeData['max']) && !self::checkMaxObject($safeData['max'], $object, $safeData['ignore']) ||
+                        !empty($safeData['type']) && !self::checkTypeArray($safeData['type'], $object, $exception)
                     )
                 ) {
                     if (!$exception) continue;
@@ -145,7 +157,7 @@ class ModelBuilder
         return true;
     }
 
-    private function checkMinObject(float $min, mixed $object): bool
+    private static function checkMinObject(float $min, mixed $object): bool
     {
         if (is_array($object)) {
             return sizeof($object) >= $min;
@@ -157,8 +169,11 @@ class ModelBuilder
         return true;
     }
 
-    private function checkMaxObject(float $max, mixed $object): bool
+    private static function checkMaxObject(float $max, mixed &$object, bool $ignore): bool
     {
+        if ($ignore) {
+            return self::checkLengthObject($max, $object);
+        }
         if (is_array($object)) {
             return sizeof($object) <= $max;
         } elseif (is_string($object)) {
@@ -169,14 +184,14 @@ class ModelBuilder
         return true;
     }
 
-    private function checkLengthObject(int $length, mixed &$object): bool/*true*/
+    private static function checkLengthObject(float $length, mixed &$object): bool/*true*/
     {
         if (is_array($object)) {
             if (sizeof($object) > $length)
-                $object = array_slice($object, 0, $length);
+                $object = array_slice($object, 0, (int) $length);
         } elseif (is_string($object)) {
             if (mb_strlen($object, 'UTF-8') > $length)
-                $object = mb_substr($object, 0, $length, 'UTF-8');
+                $object = mb_substr($object, 0,  (int) $length, 'UTF-8');
         } elseif (is_numeric($object)) {
             if ($object > $length)
                 $object = $length;
@@ -184,7 +199,7 @@ class ModelBuilder
         return true;
     }
 
-    private function checkTypeArray(mixed $type, mixed &$object, bool $exception): bool
+    private static function checkTypeArray(mixed $type, mixed &$object, bool $exception): bool
     {
         if (is_array($object)) {
             for ($i = sizeof($object) - 1; $i > -1; $i--) {
@@ -201,7 +216,7 @@ class ModelBuilder
         return true;
     }
 
-    private function findEnum(string $className, mixed $with): ?object
+    private static function findEnum(string $className, mixed $with): ?object
     {
         if (!empty($with)) foreach (call_user_func("$className::cases") as $ley => $value)
             if ($value->name === $with || isset($value->value) && $value->value === $with)

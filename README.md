@@ -36,7 +36,7 @@ class Book extends ModelBuilder
     private int $id; // Ignore
     #[Ignore]
     public string $name;  // Ignore
-    #[Safe(name: 'is_article')]
+    #[Safe(alternate: ['is_article'])]
     public bool $isArticle; // non-null and searches for is_article key
     public ?string $description;  // allow null
     public ?bool $isAvailable;
@@ -49,7 +49,7 @@ class Items extends ModelBuilder
     #[Safe(min: 1, max: 1)]
     public int $count;
     public Book $book;
-    #[Safe(pattern: '/^\w+$/i', length: 6)]
+    #[Safe(pattern: '/^\w+$/i', max: 6, ignore: true)]
     public string $text;
     #[Safe(max: 5, type: 'int')]
     public mixed $meta;
