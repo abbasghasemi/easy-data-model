@@ -7,7 +7,7 @@ namespace AG\DataModel;
 use Attribute;
 
 #[Attribute(Attribute::TARGET_PROPERTY)]
-final /*readonly*/ class Ignore
+final class Ignore
 {
 
 }

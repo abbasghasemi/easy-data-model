@@ -31,7 +31,7 @@ enum Number2: string
     case two = "two";
 }
 
-class Book extends ModelBuilder
+class Book
 {
     private int $id; // Ignore
     #[Ignore]
@@ -60,12 +60,12 @@ class Items extends ModelBuilder
     public ?Number2 $number2;
     protected Number $number;
     
-    protected function allowsNull(string $propertyName): bool
+    public function onAllowsNull(string $propertyName): bool
     {
         if ('number2' === $propertyName) {
             // control of nullable property.
         }
-        return parent::allowsNull($propertyName);
+        return parent::onAllowsNull($propertyName);
     }
 }
 
@@ -95,9 +95,11 @@ $data = [
     'number2' => 'two',
     'number' => 'one'
 ];
-$item = new Items($data);
-echo $item->name;
-echo json_encode($item);
+$item = new Items($data); // or ModelBuilder::fromArray($data, objectOrClass);
+echo '<pre>';
+echo $item->name . '<br>';
+echo json_encode($item, JSON_PRETTY_PRINT);
+echo '<br>';
 /*
  * Output: Success
  test name{
@@ -131,6 +133,7 @@ echo json_encode($item);
  */
 
 // Invalid sample
+echo '<br>Invalid sample<br>';
 $data = [
     'name' => 'te',
     'count' => '2',
@@ -144,7 +147,7 @@ $data = [
     'number' => 'three'
 ];
 try {
-    $item = new Items($data, true);
+    $item = new Items($data);
     echo $item->name;
 } catch (ModelBuilderException $e) {
 //    echo $e->class;

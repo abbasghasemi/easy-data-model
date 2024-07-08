@@ -10,6 +10,7 @@ class ModelBuilderException extends Exception
 {
     public string $class, $property;
     public mixed $propertyValue;
+
     public function __construct(string $class, string $property, mixed $propertyValue, string $message)
     {
         $this->class = $class;

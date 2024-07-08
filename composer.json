@@ -1,74 +1,73 @@
 {
-    "name": "abbasghasemi/easy-data-model",
-    "description": "Creates a data model from array data.",
-    "license": "MIT",
-    "type": "library",
-    "keywords": [
-        "data",
-        "model",
-        "data-model"
-    ],
-    "require": {
-        "php": "^8.1",
-        "ext-mbstring": "*"
+  "name": "abbasghasemi/easy-data-model",
+  "description": "Creates a data model from array data.",
+  "license": "MIT",
+  "type": "library",
+  "keywords": [
+    "data",
+    "model",
+    "data-model"
+  ],
+  "require": {
+    "php": "^8.1",
+    "ext-mbstring": "*"
+  },
+  "minimum-stability": "dev",
+  "prefer-stable": true,
+  "autoload": {
+    "psr-4": {
+      "AG\\DataModel\\": "src/"
     },
-    "minimum-stability": "dev",
-    "prefer-stable": true,
-    "autoload": {
-        "psr-4": {
-            "AG\\DataModel\\": "src/"
-        },
-        "files": [
-
-        ]
-    },
-    "autoload-dev": {
-        "psr-4": {
-            "AG\\DataModel\\Test\\": "test/"
-        }
-    },
-    "config": {
-        "allow-plugins": {
-            "captainhook/plugin-composer": true,
-            "ergebnis/composer-normalize": true,
-            "phpstan/extension-installer": true,
-            "dealerdirect/phpcodesniffer-composer-installer": true
-        },
-        "sort-packages": true
-    },
-    "extra": {
-        "captainhook": {
-            "force-install": true
-        },
-        "branch-alias": {
-            "dev-master": "1.0-dev"
-        }
-    },
-    "scripts": {
-        "analyze": [
-            "@phpstan",
-            "@psalm"
-        ],
-        "build:clean": "git clean -fX build/",
-        "lint": "parallel-lint src tests",
-        "lint:paths": "parallel-lint",
-        "phpbench": "phpbench run",
-        "phpcbf": "phpcbf -vpw --cache=build/cache/phpcs.cache",
-        "phpcs": "phpcs --cache=build/cache/phpcs.cache",
-        "phpstan": [
-            "phpstan analyse --no-progress --memory-limit=1G",
-            "phpstan analyse -c phpstan-tests.neon --no-progress --memory-limit=1G"
-        ],
-        "phpunit": "phpunit --verbose --colors=always",
-        "phpunit-coverage": "phpunit --verbose --colors=always --coverage-html build/coverage",
-        "psalm": "psalm --show-info=false --config=psalm.xml",
-        "test": [
-            "@lint",
-            "@phpbench",
-            "@phpcs",
-            "@phpstan",
-            "@psalm",
-            "@phpunit"
-        ]
+    "files": [
+    ]
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "AG\\DataModel\\Test\\": "test/"
     }
+  },
+  "config": {
+    "allow-plugins": {
+      "captainhook/plugin-composer": true,
+      "ergebnis/composer-normalize": true,
+      "phpstan/extension-installer": true,
+      "dealerdirect/phpcodesniffer-composer-installer": true
+    },
+    "sort-packages": true
+  },
+  "extra": {
+    "captainhook": {
+      "force-install": true
+    },
+    "branch-alias": {
+      "dev-master": "1.0-dev"
+    }
+  },
+  "scripts": {
+    "analyze": [
+      "@phpstan",
+      "@psalm"
+    ],
+    "build:clean": "git clean -fX build/",
+    "lint": "parallel-lint src tests",
+    "lint:paths": "parallel-lint",
+    "phpbench": "phpbench run",
+    "phpcbf": "phpcbf -vpw --cache=build/cache/phpcs.cache",
+    "phpcs": "phpcs --cache=build/cache/phpcs.cache",
+    "phpstan": [
+      "phpstan analyse --no-progress --memory-limit=1G",
+      "phpstan analyse -c phpstan-tests.neon --no-progress --memory-limit=1G"
+    ],
+    "phpunit": "phpunit --verbose --colors=always",
+    "phpunit-coverage": "phpunit --verbose --colors=always --coverage-html build/coverage",
+    "psalm": "psalm --show-info=false --config=psalm.xml",
+    "test": [
+      "@lint",
+      "@phpbench",
+      "@phpcs",
+      "@phpstan",
+      "@psalm",
+      "@phpunit"
+    ]
+  }
 }

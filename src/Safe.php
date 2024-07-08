@@ -20,12 +20,12 @@ final /*readonly*/ class Safe
      * Also type can be a @link ModelBuilder
      */
     public function __construct(
-        ?array  $alternate = null,
-        ?string $pattern = null,
-        ?float  $min = null,
-        ?float  $max = null,
-        bool    $ignore = false,
-        ?string $type = null
+        public ?array  $alternate = null,
+        public ?string $pattern = null,
+        public ?float  $min = null,
+        public ?float  $max = null,
+        public bool    $ignore = false,
+        public ?string $type = null
     )
     {
         assert(!$ignore || $max !== null, '!$ignore || $max !== null');
