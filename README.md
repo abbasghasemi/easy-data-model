@@ -18,9 +18,22 @@ composer require abbasghasemi/easy-data-model
 
 ## Example
 ```php
+<?php
+
+include_once 'vendor/autoload.php';
+
+use AG\DataModel\AllowsPropertyNull;
+use AG\DataModel\EnumBuilder;
+use AG\DataModel\Ignore;
+use AG\DataModel\ModelBuilder;
+use AG\DataModel\ModelBuilderException;
+use AG\DataModel\Safe;
+use AG\DataModel\PropertyValueConvertor;
+
 enum Number
 {
     use EnumBuilder;
+
     case one;
     case two;
 }
@@ -29,6 +42,14 @@ enum Number2: string
 {
     case one = "one";
     case two = "two";
+}
+
+class SplitData
+{
+    #[Safe(min: 3, max: 30)]
+    public string $name;
+    #[Safe(min: 1, max: 1)]
+    public int $count;
 }
 
 class Book
@@ -42,34 +63,45 @@ class Book
     public ?bool $isAvailable;
 }
 
-class Items extends ModelBuilder
+class Items extends ModelBuilder implements AllowsPropertyNull, PropertyValueConvertor
 {
     #[Safe(min: 3, max: 30)]
     public string $name;
     #[Safe(min: 1, max: 1)]
     public int $count;
+
     public Book $book;
+    #[Safe(alternate: [])]
+    public SplitData $splitData;
     #[Safe(pattern: '/^\w+$/i', max: 6, ignore: true)]
     public string $text;
     #[Safe(max: 5, type: 'int')]
     public mixed $meta;
-    #[Safe(max: 3, type: 'Book')]
+    #[Safe(max: 3, type: Book::class)]
     public array $books;
     public int $id;
     public int|string $flag;
+    #[Safe(alternate: ['count'], type: 'int', followConvert: true)]
+    public Number2 $convertor;
     public ?Number2 $number2;
     protected Number $number;
-    
+
     public function onAllowsNull(string $propertyName): bool
     {
         if ('number2' === $propertyName) {
-            // control of nullable property.
+            return false; // can't be null
         }
-        return parent::onAllowsNull($propertyName);
+        return true;
+    }
+
+    function onConvert(string $propertyName, mixed $propertyValue): mixed
+    {
+        if ($propertyName === 'convertor') {
+            return Number2::one;
+        }
+        return null;
     }
 }
-
-$data = json_decode(file_get_contents('php://input'), True);
 
 // Valid sample
 $data = [
@@ -102,33 +134,42 @@ echo json_encode($item, JSON_PRETTY_PRINT);
 echo '<br>';
 /*
  * Output: Success
- test name{
-    "name":"test name",
-    "count":1,
-    "book":{
-        "isArticle":true,
-        "description":"48999696",
-        "isAvailable":true
+{
+    "name": "test name",
+    "count": 1,
+    "book": {
+        "isArticle": true,
+        "description": "48999696",
+        "isAvailable": true
     },
-    "text":"test_t",
-    "meta":[
-        1,2,3,4,5
+    "splitData": {
+        "name": "test name",
+        "count": 1
+    },
+    "text": "test_t",
+    "meta": [
+        1,
+        2,
+        3,
+        4,
+        5
     ],
-    "books":[
+    "books": [
         {
-            "isArticle":true,
-            "description":null,
-            "isAvailable":null
+            "isArticle": true,
+            "description": null,
+            "isAvailable": null
         },
         {
-            "isArticle":false,
-            "description":null,
-            "isAvailable":null
+            "isArticle": false,
+            "description": null,
+            "isAvailable": null
         }
     ],
-    "id":3,
-    "flag":"1578788",
-    "number2":"two"
+    "id": 3,
+    "flag": "1578788",
+    "convertor": "one",
+    "number2": "two"
 }
  */
 
@@ -143,7 +184,7 @@ $data = [
     ],
     'text' => 'test^text',
     'meta' => [1, 2, 3, 4, 5, 6],
-    'books' => [1,2],
+    'books' => [1, 2],
     'number' => 'three'
 ];
 try {

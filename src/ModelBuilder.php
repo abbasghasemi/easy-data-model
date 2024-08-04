@@ -7,6 +7,7 @@ namespace AG\DataModel;
 use ReflectionClass;
 use ReflectionException;
 use ReflectionNamedType;
+use TypeError;
 use UnitEnum;
 use function boolval;
 use function call_user_func;
@@ -30,7 +31,7 @@ use function strval;
 
 //use function class_uses;
 
-class ModelBuilder implements AllowsPropertyNull
+class ModelBuilder
 {
 
     public function __construct(array $data)
@@ -71,65 +72,78 @@ class ModelBuilder implements AllowsPropertyNull
                 }
             }
             unset($propertyName);
-            if (empty($safeData->alternate)) {
+            if ($safeData === null || $safeData->alternate === null) {
                 $propertyName = $property->name;
-            } else if (count($safeData->alternate) === 1) {
-                $propertyName = $safeData->alternate[0];
-            } else {
-                foreach ($safeData->alternate as $name) {
-                    if (isset($data[$name])) {
-                        $propertyName = $name;
-                        break;
+            } elseif (!empty($safeData->alternate)) {
+                if (count($safeData->alternate) === 1) {
+                    $propertyName = $safeData->alternate[0];
+                } else {
+                    foreach ($safeData->alternate as $name) {
+                        if (isset($data[$name])) {
+                            $propertyName = $name;
+                            break;
+                        }
                     }
+                    if (!isset($propertyName)) $propertyName = $safeData->alternate[0];
                 }
-                if (!isset($propertyName)) $propertyName = $safeData->alternate[0];
             }
             $propertyType = $property->getType();
             if (null === $propertyType) {
-                if (!ModelBuilderPlugins::$exception) continue;
+                if (ModelBuilderPlugins::$ignoreWithoutType) continue;
                 throw new ModelBuilderException($reflection->name, $property->name, null, "The property type '$property->name' can't be empty");
             }
+            if (isset($propertyName)) {
+                $value = $data[$propertyName] ?? null;
+            } else {
+                $propertyName = $property->name;
+                $value = $data;
+            }
+            $followConvert = $safeData !== null && $safeData->followConvert;
             $object = null;
-            if (isset($data[$propertyName])) {
-                $dataType = get_debug_type($data[$propertyName]);
-                if ($propertyType instanceof ReflectionNamedType) {
-                    $type = $propertyType->getName();
+            if ($value !== null) {
+                $dataType = get_debug_type($value);
+                $useSafeType = $followConvert && !empty($safeData->type);
+                if ($useSafeType || $propertyType instanceof ReflectionNamedType) {
+                    $type = $useSafeType ? $safeData->type : $propertyType->getName();
                     if ("mixed" === $type || $dataType === $type) {
-                        $object = $data[$propertyName];
-                    } else if ($propertyType->isBuiltin()) {
+                        $object = $value;
+                    } else if ($useSafeType && in_array($type, ['array', 'null', 'bool',
+                            'float', 'int', 'string', 'object', 'resource']) ||
+                        !$useSafeType && $propertyType->isBuiltin()) {
                         if ('string' === $dataType) {
                             if ('bool' === $type) {
-                                $value = strtolower($data[$propertyName]);
+                                $value = strtolower($value);
                                 if ('false' === $value) $object = false;
-                                elseif (in_array($value, ['0', '1', 'true'])) $object = boolval($data[$propertyName]);
-                                unset($value);
-                            } else if (is_numeric($data[$propertyName])) {
-                                if ('int' === $type) $object = intval($data[$propertyName]);
-                                else /*if ('float' === $type)*/ $object = floatval($data[$propertyName]);
+                                elseif (in_array($value, ['0', '1', 'true'])) $object = boolval($value);
+                            } else if (is_numeric($value)) {
+                                if ('int' === $type) $object = intval($value);
+                                else /*if ('float' === $type)*/ $object = floatval($value);
                             }
                         } else if ('int' === $dataType) {
                             if ('bool' === $type) {
-                                if ($data[$propertyName] === 0 || $data[$propertyName] === 1)
-                                    $object = boolval($data[$propertyName]);
+                                if ($value === 0 || $value === 1)
+                                    $object = boolval($value);
                             } else if ('float' === $type) {
-                                $object = $data[$propertyName];
+                                $object = $value;
                             } else if ('string' === $type) {
-                                if (is_numeric($data[$propertyName]))
-                                    $object = strval($data[$propertyName]);
+                                if (is_numeric($value))
+                                    $object = strval($value);
                             }
-                        } else if ('int' === $type && is_float($data[$propertyName])) {
-                            $object = intval($data[$propertyName]);
-                        } else if ('object' === $type && is_object($data[$propertyName])) {
-                            $object = $data[$propertyName];
+                        } else if ('int' === $type && is_float($value)) {
+                            $object = intval($value);
+                        } else if ('object' === $type && is_object($value)) {
+                            $object = $value;
+                        } else if ('resource' === $type && is_resource($value)) {
+                            $object = $value;
                         }
                     } else {
                         if (is_subclass_of($type, UnitEnum::class)) {
-                            $object = self::findEnum($type, $data[$propertyName]);
-                        } else if (is_array($data[$propertyName])) {
+                            $object = self::findEnum($type, $value);
+                        } else if (is_array($value)) {
                             if (is_subclass_of($type, ModelBuilder::class))
-                                $object = new $type($data[$propertyName]);
+                                $object = new $type($value);
                             else {
-                                $object = self::fromArray($data[$propertyName], $type);
+                                $object = self::fromArray($value, $type);
                             }
                         }
                     }
@@ -138,49 +152,67 @@ class ModelBuilder implements AllowsPropertyNull
                     $types = $propertyType->getTypes();
                     for ($k = 0, $l = sizeof($types); $k < $l; $k++) {
                         if ($dataType === $types[$k]->getName() ||
-                            'object' === $types[$k]->getName() && is_object($data[$propertyName])) {
-                            $object = $data[$propertyName];
+                            'object' === $types[$k]->getName() && is_object($value) ||
+                            'resource' === $types[$k]->getName() && is_resource($value)) {
+                            $object = $value;
                             break;
                         }
                     }
                     unset($types, $k, $l);
                 }
-                if (is_null($object) && (!$propertyType->allowsNull() || !!self::resolveAllowsNull($class, $propertyName)) ||
-                    !is_null($object) && !empty($safeData) && (
+                if (!is_null($object) && !empty($safeData) && (
                         !empty($safeData->pattern) && is_string($object) && !preg_match($safeData->pattern, $object) ||
                         !empty($safeData->min) && !self::checkMinObject($safeData->min, $object) ||
                         !empty($safeData->max) && !self::checkMaxObject($safeData->max, $object, $safeData->ignore) ||
                         !empty($safeData->type) && !self::checkTypeArray($safeData->type, $object)
                     )
                 ) {
-                    if (!ModelBuilderPlugins::$exception) continue;
-                    if (is_object($data[$propertyName]) && !method_exists($data[$propertyName], '__toString')) {
+                    if (is_object($value) && !method_exists($value, '__toString')) {
                         $value = "Object";
                     } else {
-                        $value = is_array($data[$propertyName]) ? 'Array' : strval($data[$propertyName]);
+                        $value = is_array($value) ? 'Array' : strval($value);
                     }
-                    throw new ModelBuilderException($reflection->name, $propertyName, $data[$propertyName], "The value of '$value' is invalid for parameter '$propertyName'");
+                    throw new ModelBuilderException($reflection->name, $propertyName, $value, "The value of '{$value}' is invalid for parameter '{$property->name}'");
                 }
-                unset($dataType);
-            } elseif ($property->hasDefaultValue()) {
-                continue;
-            } elseif (!$propertyType->allowsNull() || !self::resolveAllowsNull($class, $propertyName)) {
-                if (!ModelBuilderPlugins::$exception) continue;
-                throw new ModelBuilderException($reflection->name, $propertyName, null, "The parameter '$propertyName' is required");
+                unset($dataType, $useSafeType);
             }
-            if ($property->isProtected()) {
-                $property->setValue($class, $object);
-            } else {
-                $class->{$property->name} = $object;
+            if ($followConvert) {
+                self::resolveConvertor($class, $property->name, $object, $reflection->name);
+            }
+            if ($object === null) {
+                if ($property->hasDefaultValue()) {
+                    continue;
+                } elseif (!$propertyType->allowsNull() || !self::resolveAllowsNull($class, $property->name)) {
+                    throw new ModelBuilderException($reflection->name, $propertyName, null, "The parameter '{$property->name}' is required");
+                }
+            }
+            try {
+                if ($property->isProtected()) {
+                    $property->setValue($class, $object);
+                } else {
+                    $class->{$property->name} = $object;
+                }
+            } catch (TypeError $e) {
+                throw new ModelBuilderException($reflection->name, '', null, $e->getMessage());
             }
         }
-
+        if (is_subclass_of($class, FinallyAssert::class)) {
+            $assert = $class->onAssert();
+            if (!empty($assert))
+                throw new ModelBuilderException($reflection->name, '', null, $assert);
+        }
         return $class;
     }
 
-    public function onAllowsNull(string $propertyName): bool
+    private static function resolveConvertor(object $class, string $propertyName, mixed &$object, string $className): void
     {
-        return true;
+        if (is_subclass_of($class, PropertyValueConvertor::class)) {
+            $object = $class->onConvert($propertyName, $object);
+        } elseif (!empty(ModelBuilderPlugins::$convertor)) {
+            $object = ModelBuilderPlugins::$convertor->call($class, $propertyName, $object);
+        } else {
+            throw new ModelBuilderException($className, $propertyName, $object, "You have enabled the followConvert feature, but you forgot to launch it!");
+        }
     }
 
     private static function resolveAllowsNull(object $class, string $propertyName): bool
@@ -259,7 +291,7 @@ class ModelBuilder implements AllowsPropertyNull
 
     private static function findEnum(string $className, mixed $with): ?object
     {
-        if (!empty($with)) foreach (call_user_func("$className::cases") as $key => $value)
+        if (!empty($with) || $with === 0) foreach (call_user_func("$className::cases") as $key => $value)
             if ($value->name === $with || isset($value->value) && $value->value === $with)
                 return $value;
         return null;

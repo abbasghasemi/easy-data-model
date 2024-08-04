@@ -7,7 +7,7 @@ use Closure;
 
 class ModelBuilderPlugins
 {
-    public static bool $exception = true;
+    public static bool $ignoreWithoutType = false;
 
     /**
      * @var ?Closure
@@ -19,5 +19,16 @@ class ModelBuilderPlugins
      * </pre>
      */
     public static ?Closure $allowsNull = null;
+
+    /**
+     * @var ?Closure
+     * @example
+     * <pre>
+     * ModelBuilderPlugins::$convertor = function (string $propertyName, mixed $propertyValue): mixed {
+     *      return 'NewValue';
+     * };
+     * </pre>
+     */
+    public static ?Closure $convertor = null;
 
 }
