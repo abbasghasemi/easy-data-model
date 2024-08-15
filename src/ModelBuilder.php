@@ -271,14 +271,14 @@ class ModelBuilder
     private static function checkTypeArray(mixed $type, mixed &$object): bool
     {
         if (is_array($object)) {
-            for ($i = sizeof($object) - 1; $i > -1; $i--) {
-                $dataType = get_debug_type($object[$i]);
+            foreach ($object as $k => $v) {
+                $dataType = get_debug_type($v);
                 if ($type !== $dataType) {
                     if ('array' === $dataType) {
                         if (is_subclass_of($type, ModelBuilder::class))
-                            $object[$i] = new $type($object[$i]);
+                            $object[$k] = new $type($v);
                         else {
-                            $object[$i] = self::fromArray($object[$i], $type);
+                            $object[$k] = self::fromArray($v, $type);
                         }
                         continue;
                     }
