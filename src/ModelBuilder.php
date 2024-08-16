@@ -140,7 +140,8 @@ class ModelBuilder
                         if (is_subclass_of($type, UnitEnum::class)) {
                             $object = self::findEnum($type, $value);
                         } else if (is_array($value)) {
-                            if (is_subclass_of($type, ModelBuilder::class))
+                            if (is_subclass_of($type, ModelBuilder::class) ||
+                                $type === ArrayList::class)
                                 $object = new $type($value);
                             else {
                                 $object = self::fromArray($value, $type);
@@ -234,6 +235,8 @@ class ModelBuilder
             return mb_strlen($object, 'UTF-8') >= $min;
         } elseif (is_numeric($object)) {
             return $object >= $min;
+        } elseif ($object instanceof ArrayList) {
+            return $object->size() >= $min;
         }
         return true;
     }
@@ -249,6 +252,8 @@ class ModelBuilder
             return mb_strlen($object, 'UTF-8') <= $max;
         } elseif (is_numeric($object)) {
             return $object <= $max;
+        } elseif ($object instanceof ArrayList) {
+            return $object->size() <= $max;
         }
         return true;
     }
@@ -264,22 +269,26 @@ class ModelBuilder
         } elseif (is_numeric($object)) {
             if ($object > $length)
                 $object = $length;
+        } elseif ($object instanceof ArrayList) {
+            if ($object->size() > $length)
+                $object = $object->take(intval($length));
         }
         return true;
     }
 
     private static function checkTypeArray(mixed $type, mixed &$object): bool
     {
-        if (is_array($object)) {
-            for ($i = sizeof($object) - 1; $i > -1; $i--) {
-                $dataType = get_debug_type($object[$i]);
+        if (is_array($object) || $object instanceof ArrayList) {
+            foreach ($object as $k => $v) {
+                $dataType = get_debug_type($v);
                 if ($type !== $dataType) {
                     if ('array' === $dataType) {
                         if (is_subclass_of($type, ModelBuilder::class))
-                            $object[$i] = new $type($object[$i]);
-                        else {
-                            $object[$i] = self::fromArray($object[$i], $type);
-                        }
+                            $v = new $type($v);
+                        else
+                            $v = self::fromArray($v, $type);
+                        if (is_array($object)) $object[$k] = $v;
+                        else $object->fillRange($k, 1, $v);
                         continue;
                     }
                     return false;

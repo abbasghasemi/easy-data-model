@@ -23,6 +23,7 @@ composer require abbasghasemi/easy-data-model
 include_once 'vendor/autoload.php';
 
 use AG\DataModel\AllowsPropertyNull;
+use AG\DataModel\ArrayList;
 use AG\DataModel\EnumBuilder;
 use AG\DataModel\Ignore;
 use AG\DataModel\ModelBuilder;
@@ -77,8 +78,11 @@ class Items extends ModelBuilder implements AllowsPropertyNull, PropertyValueCon
     public string $text;
     #[Safe(max: 5, type: 'int')]
     public mixed $meta;
+    /**
+     * @var ArrayList<Book>
+     */
     #[Safe(max: 3, type: Book::class)]
-    public array $books;
+    public ArrayList $books;
     public int $id;
     public int|string $flag;
     #[Safe(alternate: ['count'], type: 'int', followConvert: true)]
