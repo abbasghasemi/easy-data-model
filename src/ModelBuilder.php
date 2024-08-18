@@ -4,9 +4,13 @@ declare(strict_types=1);
 
 namespace AG\DataModel;
 
+use AG\Collection\BaseArray;
+use AG\Collection\Collection;
+use AG\Collection\Map;
 use ReflectionClass;
 use ReflectionException;
 use ReflectionNamedType;
+use Throwable;
 use TypeError;
 use UnitEnum;
 use function boolval;
@@ -50,7 +54,11 @@ class ModelBuilder
     public static function fromArray(array $data, object|string $objectOrClass): object
     {
         if (is_string($objectOrClass)) {
-            $class = new $objectOrClass;
+            try {
+                $class = new $objectOrClass;
+            } catch (Throwable $e) {
+                throw new ModelBuilderException($objectOrClass, '', null, $e->getMessage());
+            }
         } else {
             $class = $objectOrClass;
         }
@@ -58,33 +66,39 @@ class ModelBuilder
         $properties = $reflection->getProperties();
         for ($i = 0, $j = sizeof($properties); $i < $j; $i++) {
             $property = $properties[$i];
-            if ($property->isPrivate() || $property->isStatic()) continue;
+            if ($property->isStatic()) continue;
             $attrs = $property->getAttributes();
             /**
-             * @var ?Safe $safeData
+             * @var ?Safe $safe
              */
-            $safeData = null;
+            $safe = null;
+            $hasIgnore = false;
             foreach ($attrs as $attr) {
-                if ($attr->getName() === Ignore::class) continue 2;
+                if ($attr->getName() === Ignore::class) {
+                    $hasIgnore = true;
+                    continue;
+                }
                 if ($attr->getName() === Safe::class) {
-                    $safeData = $attr->newInstance();
-                    break;
+                    $safe = $attr->newInstance();
                 }
             }
-            unset($propertyName);
-            if ($safeData === null || $safeData->alternate === null) {
+            if ($hasIgnore && !$property->isPrivate() || !$hasIgnore && $property->isPrivate()) {
+                continue;
+            }
+            unset($propertyName, $hasIgnore);
+            if ($safe === null || $safe->alternate === null) {
                 $propertyName = $property->name;
-            } elseif (!empty($safeData->alternate)) {
-                if (count($safeData->alternate) === 1) {
-                    $propertyName = $safeData->alternate[0];
+            } elseif (!empty($safe->alternate)) {
+                if (count($safe->alternate) === 1) {
+                    $propertyName = $safe->alternate[0];
                 } else {
-                    foreach ($safeData->alternate as $name) {
+                    foreach ($safe->alternate as $name) {
                         if (isset($data[$name])) {
                             $propertyName = $name;
                             break;
                         }
                     }
-                    if (!isset($propertyName)) $propertyName = $safeData->alternate[0];
+                    if (!isset($propertyName)) $propertyName = $safe->alternate[0];
                 }
             }
             $propertyType = $property->getType();
@@ -98,14 +112,15 @@ class ModelBuilder
                 $propertyName = $property->name;
                 $value = $data;
             }
-            $followConvert = $safeData !== null && $safeData->followConvert;
+            $followConvert = $safe !== null && $safe->convertor;
             $object = null;
             if ($value !== null) {
                 $dataType = get_debug_type($value);
-                $useSafeType = $followConvert && !empty($safeData->type);
+                $useSafeType = $followConvert && !empty($safe->type);
                 if ($useSafeType || $propertyType instanceof ReflectionNamedType) {
-                    $type = $useSafeType ? $safeData->type : $propertyType->getName();
-                    if ("mixed" === $type || $dataType === $type) {
+                    $type = $useSafeType ? $safe->type : $propertyType->getName();
+                    if ("mixed" === $type || $dataType === $type ||
+                        ($dataType === 'array' && is_subclass_of($propertyType->getName(), BaseArray::class))) {
                         $object = $value;
                     } else if ($useSafeType && in_array($type, ['array', 'null', 'bool',
                             'float', 'int', 'string', 'object', 'resource']) ||
@@ -140,8 +155,7 @@ class ModelBuilder
                         if (is_subclass_of($type, UnitEnum::class)) {
                             $object = self::findEnum($type, $value);
                         } else if (is_array($value)) {
-                            if (is_subclass_of($type, ModelBuilder::class) ||
-                                $type === ArrayList::class)
+                            if (is_subclass_of($type, ModelBuilder::class))
                                 $object = new $type($value);
                             else {
                                 $object = self::fromArray($value, $type);
@@ -161,11 +175,11 @@ class ModelBuilder
                     }
                     unset($types, $k, $l);
                 }
-                if (!is_null($object) && !empty($safeData) && (
-                        !empty($safeData->pattern) && is_string($object) && !preg_match($safeData->pattern, $object) ||
-                        !empty($safeData->min) && !self::checkMinObject($safeData->min, $object) ||
-                        !empty($safeData->max) && !self::checkMaxObject($safeData->max, $object, $safeData->ignore) ||
-                        !empty($safeData->type) && !self::checkTypeArray($safeData->type, $object)
+                if (!is_null($object) && !empty($safe) && (
+                        !empty($safe->pattern) && is_string($object) && !preg_match($safe->pattern, $object) ||
+                        !empty($safe->min) && !self::checkMinObject($safe->min, $object) ||
+                        !empty($safe->max) && !self::checkMaxObject($safe->max, $object, $safe->overflow) ||
+                        !empty($safe->type) && !self::checkTypeArray($safe->type, $object, fn() => $propertyType instanceof ReflectionNamedType ? $propertyType->getName() : 'array')
                     )
                 ) {
                     if (is_object($value) && !method_exists($value, '__toString')) {
@@ -188,10 +202,10 @@ class ModelBuilder
                 }
             }
             try {
-                if ($property->isProtected()) {
-                    $property->setValue($class, $object);
-                } else {
+                if ($property->isPublic()) {
                     $class->{$property->name} = $object;
+                } else {
+                    $property->setValue($class, $object);
                 }
             } catch (TypeError $e) {
                 throw new ModelBuilderException($reflection->name, '', null, $e->getMessage());
@@ -207,7 +221,7 @@ class ModelBuilder
 
     private static function resolveConvertor(object $class, string $propertyName, mixed &$object, string $className): void
     {
-        if (is_subclass_of($class, PropertyValueConvertor::class)) {
+        if (is_subclass_of($class, ValueConvertor::class)) {
             $object = $class->onConvert($propertyName, $object);
         } elseif (!empty(ModelBuilderPlugins::$convertor)) {
             $object = ModelBuilderPlugins::$convertor->call($class, $propertyName, $object);
@@ -218,8 +232,8 @@ class ModelBuilder
 
     private static function resolveAllowsNull(object $class, string $propertyName): bool
     {
-        if (is_subclass_of($class, AllowsPropertyNull::class)) {
-            return $class->onAllowsNull($propertyName);
+        if (is_subclass_of($class, PropertyNullable::class)) {
+            return $class->onNullable($propertyName);
         }
         if (ModelBuilderPlugins::$allowsNull !== null) {
             return ModelBuilderPlugins::$allowsNull->call($class, $propertyName);
@@ -235,15 +249,15 @@ class ModelBuilder
             return mb_strlen($object, 'UTF-8') >= $min;
         } elseif (is_numeric($object)) {
             return $object >= $min;
-        } elseif ($object instanceof ArrayList) {
+        } elseif ($object instanceof BaseArray) {
             return $object->size() >= $min;
         }
         return true;
     }
 
-    private static function checkMaxObject(float $max, mixed &$object, bool $ignore): bool
+    private static function checkMaxObject(float $max, mixed &$object, bool $overflow): bool
     {
-        if ($ignore) {
+        if ($overflow) {
             return self::checkLengthObject($max, $object);
         }
         if (is_array($object)) {
@@ -252,13 +266,13 @@ class ModelBuilder
             return mb_strlen($object, 'UTF-8') <= $max;
         } elseif (is_numeric($object)) {
             return $object <= $max;
-        } elseif ($object instanceof ArrayList) {
+        } elseif ($object instanceof BaseArray) {
             return $object->size() <= $max;
         }
         return true;
     }
 
-    private static function checkLengthObject(float $length, mixed &$object): bool/*true*/
+    private static function checkLengthObject(float $length, mixed &$object): bool
     {
         if (is_array($object)) {
             if (sizeof($object) > $length)
@@ -269,29 +283,38 @@ class ModelBuilder
         } elseif (is_numeric($object)) {
             if ($object > $length)
                 $object = $length;
-        } elseif ($object instanceof ArrayList) {
+        } elseif ($object instanceof Collection) {
             if ($object->size() > $length)
                 $object = $object->take(intval($length));
+        } elseif ($object instanceof Map) {
+            if ($object->size() > $length)
+                return false;
         }
         return true;
     }
 
-    private static function checkTypeArray(mixed $type, mixed &$object): bool
+    private static function checkTypeArray(mixed $type, mixed &$object, callable $propertyType): bool
     {
-        if (is_array($object) || $object instanceof ArrayList) {
+        if (is_array($object) && $type !== 'mixed') {
             foreach ($object as $k => $v) {
                 $dataType = get_debug_type($v);
                 if ($type !== $dataType) {
                     if ('array' === $dataType) {
                         if (is_subclass_of($type, ModelBuilder::class))
-                            $v = new $type($v);
+                            $object[$k] = new $type($v);
                         else
-                            $v = self::fromArray($v, $type);
-                        if (is_array($object)) $object[$k] = $v;
-                        else $object->fillRange($k, 1, $v);
+                            $object[$k] = self::fromArray($v, $type);
                         continue;
                     }
                     return false;
+                }
+            }
+            $type = $propertyType();
+            if (is_subclass_of($type, BaseArray::class)) {
+                try {
+                    $object = new $type($object);
+                } catch (Throwable $e) {
+                    throw new ModelBuilderException(get_called_class(), strval($type), null, $e->getMessage() . " on instance of $type");
                 }
             }
         }

@@ -4,8 +4,64 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "5e118e32112ed44e4bbca97b81894665",
-    "packages": [],
+    "content-hash": "d8171b418700fc5b892062c6a40f4b17",
+    "packages": [
+        {
+            "name": "abbasghasemi/collection",
+            "version": "1.3",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/abbasghasemi/collection.git",
+                "reference": "f19ec00744ecd57fd62711e2b297da9fc2844300"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/abbasghasemi/collection/zipball/f19ec00744ecd57fd62711e2b297da9fc2844300",
+                "reference": "f19ec00744ecd57fd62711e2b297da9fc2844300",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^8.1"
+            },
+            "type": "library",
+            "extra": {
+                "captainhook": {
+                    "force-install": true
+                },
+                "branch-alias": {
+                    "dev-master": "1.0-dev"
+                }
+            },
+            "autoload": {
+                "files": [],
+                "psr-4": {
+                    "AG\\Collection\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "A collection of complete tools for working with PHP arrays.",
+            "keywords": [
+                "arraylist",
+                "collection",
+                "immutable",
+                "list",
+                "map",
+                "mutable",
+                "queue",
+                "serializable",
+                "set",
+                "stack"
+            ],
+            "support": {
+                "issues": "https://github.com/abbasghasemi/collection/issues",
+                "source": "https://github.com/abbasghasemi/collection/tree/1.3"
+            },
+            "time": "2024-08-18T16:28:00+00:00"
+        }
+    ],
     "packages-dev": [],
     "aliases": [],
     "minimum-stability": "dev",
