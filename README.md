@@ -1,8 +1,4 @@
-<h1 align="center">abbasghasemi/easy-data-model</h1>
-
-<p align="center">
-    <strong>A PHP library for building a data model from array data.</strong>
-</p>
+<h1 style="text-align: center">abbasghasemi/easy-data-model</h1>
 
 abbasghasemi/easy-data-model is a PHP library for easy data model creation and control.
 
@@ -16,20 +12,33 @@ command to install the package and add it as a requirement to your project's
 composer require abbasghasemi/easy-data-model
 ```
 
+## Description
+- Complete tools for modeling and validate inputs
+- Helps in building APIs
+- Can also simplify working with values & database in PHP
+- Support the [Collection library](https://github.com/abbasghasemi/collection)
+- See [Safe annotation](https://github.com/abbasghasemi/easy-data-model/blob/master/src/Safe.php)
+- See [Ignore annotation](https://github.com/abbasghasemi/easy-data-model/blob/master/src/Ignore.php)
+- See [PropertyNullable](https://github.com/abbasghasemi/easy-data-model/blob/master/src/PropertyNullable.php)
+- See [ValueConvertor](https://github.com/abbasghasemi/easy-data-model/blob/master/src/ValueConvertor.php)
+- See [FinallyAssert](https://github.com/abbasghasemi/easy-data-model/blob/master/src/FinallyAssert.php)
+- Use `ModelBuilder::fromArray(array $data,string objectOrClass);`
+
 ## Example
+
 ```php
 <?php
 
 include_once 'vendor/autoload.php';
 
-use AG\DataModel\AllowsPropertyNull;
-use AG\DataModel\ArrayList;
+use AG\Collection\ArrayList;
 use AG\DataModel\EnumBuilder;
 use AG\DataModel\Ignore;
 use AG\DataModel\ModelBuilder;
 use AG\DataModel\ModelBuilderException;
+use AG\DataModel\PropertyNullable;
 use AG\DataModel\Safe;
-use AG\DataModel\PropertyValueConvertor;
+use AG\DataModel\ValueConvertor;
 
 enum Number
 {
@@ -61,10 +70,11 @@ class Book
     #[Safe(alternate: ['is_article'])]
     public bool $isArticle; // non-null and searches for is_article key
     public ?string $description;  // allow null
-    public ?bool $isAvailable;
+    #[Ignore]
+    private ?bool $isAvailable; // Ignore private
 }
 
-class Items extends ModelBuilder implements AllowsPropertyNull, PropertyValueConvertor
+class Items extends ModelBuilder implements PropertyNullable, ValueConvertor
 {
     #[Safe(min: 3, max: 30)]
     public string $name;
@@ -74,7 +84,7 @@ class Items extends ModelBuilder implements AllowsPropertyNull, PropertyValueCon
     public Book $book;
     #[Safe(alternate: [])]
     public SplitData $splitData;
-    #[Safe(pattern: '/^\w+$/i', max: 6, ignore: true)]
+    #[Safe(pattern: '/^\w+$/i', max: 6, overflow: true)]
     public string $text;
     #[Safe(max: 5, type: 'int')]
     public mixed $meta;
@@ -85,12 +95,12 @@ class Items extends ModelBuilder implements AllowsPropertyNull, PropertyValueCon
     public ArrayList $books;
     public int $id;
     public int|string $flag;
-    #[Safe(alternate: ['count'], type: 'int', followConvert: true)]
+    #[Safe(alternate: ['count'], type: 'int', convertor: true)]
     public Number2 $convertor;
     public ?Number2 $number2;
     protected Number $number;
 
-    public function onAllowsNull(string $propertyName): bool
+    public function onNullable(string $propertyName): bool
     {
         if ('number2' === $propertyName) {
             return false; // can't be null
@@ -121,6 +131,7 @@ $data = [
     'books' => [
         [
             'is_article' => true,
+            'description' => 'Managed by ArrayList'
         ],
         [
             'is_article' => false,
@@ -133,7 +144,7 @@ $data = [
 ];
 $item = new Items($data); // or ModelBuilder::fromArray($data, objectOrClass);
 echo '<pre>';
-echo $item->name . '<br>';
+echo $item->books->first()->description . '<br>';
 echo json_encode($item, JSON_PRETTY_PRINT);
 echo '<br>';
 /*
@@ -161,7 +172,7 @@ echo '<br>';
     "books": [
         {
             "isArticle": true,
-            "description": null,
+            "description": "Managed by ArrayList"
             "isAvailable": null
         },
         {
@@ -212,4 +223,11 @@ try {
     // The value of 'ONE' is invalid for parameter 'number' in `Items`.
 }
 ```
-[license]: https://github.com/abbasghasemi/easy-data-model/blob/master/LICENSE
+
+## See also collection
+[A collection of complete tools for working with PHP arrays.](https://github.com/abbasghasemi/collection)
+
+## Author & support
+This library was created by [Abbas Ghasemi](https://farasource.com/).
+
+You can report issues at the [GitHub Issue Tracker](https://github.com/abbasghasemi/easy-data-model/issues).
