@@ -40,12 +40,19 @@ use AG\DataModel\PropertyNullable;
 use AG\DataModel\Safe;
 use AG\DataModel\ValueConvertor;
 
-enum Number
+enum Number implements JsonSerializable
 {
     use EnumBuilder;
 
     case one;
     case two;
+    
+    public function jsonSerialize(): string {
+        return match ($this) {
+            Number3::one => 'one',
+            Number3::two => 'two',
+        };
+    }
 }
 
 enum Number2: string

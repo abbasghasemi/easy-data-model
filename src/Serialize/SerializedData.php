@@ -31,11 +31,7 @@ class SerializedData extends Serialized
 
     public function write(int $value): void
     {
-        if ($value > 127 || $value < -128) {
-            // cast to byte
-            $value = unpack("c*", pack("l", $value))[1];
-        }
-        $this->writeByte($value);
+        $this->writeByte($this->toByte($value));
     }
 
     public function writeByte(int $byte): void
@@ -299,6 +295,20 @@ class SerializedData extends Serialized
     public function toBase64(): string
     {
         return base64_encode($this->toBytes());
+    }
+
+    public function toByte(int $value): int
+    {
+        if ($value > 127 || $value < -128) {
+            // cast to byte
+            return unpack("c*", pack("l", $value))[1];
+        }
+        return $value;
+    }
+
+    public function getByteArray(): array
+    {
+        return $this->byteArray;
     }
 
     private function floatToIntBits(float $value): int
